@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::io::{self, Read, Seek, Write};
 
+use deku::ctx::Endian;
 use deku::prelude::*;
 use tracing::trace;
 
@@ -117,13 +118,25 @@ pub fn read_block<R: Read + Seek>(
     superblock: &SuperBlock,
     kind: &Kind,
 ) -> Result<Vec<u8>, BackhandError> {
-    let mut deku_reader = Reader::new(reader);
-    let metadata_len = u16::from_reader_with_ctx(&mut deku_reader, kind.inner.data_endian)?;
+    tracing::trace!("resetting transformer");
+    kind.inner.transformer.reset()?;
+
+    let mut len_buf = vec![0u8; 2];
+    reader.read_exact(&mut len_buf)?;
+
+    kind.inner.transformer.from(&mut len_buf)?;
+
+    let metadata_len = match kind.inner.data_endian {
+        Endian::Big => u16::from_be_bytes(len_buf.try_into().unwrap()),
+        Endian::Little => u16::from_le_bytes(len_buf.try_into().unwrap()),
+    };
 
     let byte_len = len(metadata_len);
     tracing::trace!("len: 0x{:02x?}", byte_len);
     let mut buf = vec![0u8; byte_len as usize];
     reader.read_exact(&mut buf)?;
+
+    kind.inner.transformer.from(&mut buf)?;
 
     let bytes = if is_compressed(metadata_len) {
         tracing::trace!("compressed");
