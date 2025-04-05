@@ -106,3 +106,8 @@ pub mod compression {
         Zstd,
     };
 }
+
+/// Transformation Choice and Options
+pub mod transformation {
+    pub use crate::transformer::{DefaultTransformer, TransformAction};
+}
