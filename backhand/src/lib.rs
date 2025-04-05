@@ -71,6 +71,7 @@ mod kinds;
 mod metadata;
 mod reader;
 mod squashfs;
+mod transformer;
 mod unix_string;
 
 pub use crate::data::DataSize;

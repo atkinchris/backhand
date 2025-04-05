@@ -3,7 +3,10 @@
 use core::fmt;
 use std::sync::Arc;
 
-use crate::compressor::{CompressionAction, DefaultCompressor};
+use crate::{
+    compressor::{CompressionAction, DefaultCompressor},
+    transformer::{DefaultTransformer, TransformAction},
+};
 
 /// Kind Magic - First 4 bytes of image
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -31,7 +34,10 @@ pub enum Endian {
     Big,
 }
 
-pub struct InnerKind<C: CompressionAction + ?Sized + 'static + Send + Sync> {
+pub struct InnerKind<
+    C: CompressionAction + ?Sized + 'static + Send + Sync,
+    T: TransformAction + ?Sized + 'static + Send + Sync,
+> {
     /// Magic at the beginning of the image
     pub(crate) magic: [u8; 4],
     /// Endian used for all data types
@@ -44,6 +50,8 @@ pub struct InnerKind<C: CompressionAction + ?Sized + 'static + Send + Sync> {
     pub(crate) version_minor: u16,
     /// Compression impl
     pub(crate) compressor: &'static C,
+    /// Transformer impl
+    pub(crate) transformer: &'static T,
 }
 
 /// Version of SquashFS, also supporting custom changes to SquashFS seen in 3rd-party firmware
@@ -51,7 +59,8 @@ pub struct InnerKind<C: CompressionAction + ?Sized + 'static + Send + Sync> {
 /// See [Kind Constants](`crate::kind#constants`) for a list of custom Kinds
 pub struct Kind {
     /// "Easier for the eyes" type for the real Kind
-    pub(crate) inner: Arc<InnerKind<dyn CompressionAction + Send + Sync>>,
+    pub(crate) inner:
+        Arc<InnerKind<dyn CompressionAction + Send + Sync, dyn TransformAction + Send + Sync>>,
 }
 
 impl fmt::Debug for Kind {
@@ -131,9 +140,13 @@ impl Kind {
         Self { inner: Arc::new(InnerKind { compressor, ..LE_V4_0 }) }
     }
 
+    pub fn new_with_transformer<T: TransformAction + Send + Sync>(transformer: &'static T) -> Self {
+        Self { inner: Arc::new(InnerKind { transformer, ..LE_V4_0 }) }
+    }
+
     pub fn new_with_const<C: CompressionAction + Send + Sync>(
         compressor: &'static C,
-        c: InnerKind<dyn CompressionAction + Send + Sync>,
+        c: InnerKind<dyn CompressionAction + Send + Sync, dyn TransformAction + Send + Sync>,
     ) -> Self {
         Self { inner: Arc::new(InnerKind { compressor, ..c }) }
     }
@@ -171,7 +184,7 @@ impl Kind {
     /// let kind = Kind::from_const(kind::LE_V4_0).unwrap();
     /// ```
     pub fn from_const(
-        inner: InnerKind<dyn CompressionAction + Send + Sync>,
+        inner: InnerKind<dyn CompressionAction + Send + Sync, dyn TransformAction + Send + Sync>,
     ) -> Result<Kind, String> {
         Ok(Kind { inner: Arc::new(inner) })
     }
@@ -246,31 +259,43 @@ impl Kind {
 }
 
 /// Default `Kind` for linux kernel and squashfs-tools/mksquashfs. Little-Endian v4.0
-pub const LE_V4_0: InnerKind<dyn CompressionAction + Send + Sync> = InnerKind {
+pub const LE_V4_0: InnerKind<
+    dyn CompressionAction + Send + Sync,
+    dyn TransformAction + Send + Sync,
+> = InnerKind {
     magic: *b"hsqs",
     type_endian: deku::ctx::Endian::Little,
     data_endian: deku::ctx::Endian::Little,
     version_major: 4,
     version_minor: 0,
     compressor: &DefaultCompressor,
+    transformer: &DefaultTransformer,
 };
 
 /// Big-Endian Superblock v4.0
-pub const BE_V4_0: InnerKind<dyn CompressionAction + Send + Sync> = InnerKind {
+pub const BE_V4_0: InnerKind<
+    dyn CompressionAction + Send + Sync,
+    dyn TransformAction + Send + Sync,
+> = InnerKind {
     magic: *b"sqsh",
     type_endian: deku::ctx::Endian::Big,
     data_endian: deku::ctx::Endian::Big,
     version_major: 4,
     version_minor: 0,
     compressor: &DefaultCompressor,
+    transformer: &DefaultTransformer,
 };
 
 /// AVM Fritz!OS firmware support. Tested with: <https://github.com/dnicolodi/squashfs-avm-tools>
-pub const AVM_BE_V4_0: InnerKind<dyn CompressionAction + Send + Sync> = InnerKind {
+pub const AVM_BE_V4_0: InnerKind<
+    dyn CompressionAction + Send + Sync,
+    dyn TransformAction + Send + Sync,
+> = InnerKind {
     magic: *b"sqsh",
     type_endian: deku::ctx::Endian::Big,
     data_endian: deku::ctx::Endian::Little,
     version_major: 4,
     version_minor: 0,
     compressor: &DefaultCompressor,
+    transformer: &DefaultTransformer,
 };
