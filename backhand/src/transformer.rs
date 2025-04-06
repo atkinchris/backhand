@@ -10,10 +10,9 @@ pub trait TransformAction {
     ///
     /// # Arguments
     ///
-    /// * `bytes` - Input bytes
-    /// * `out` - Output transformed bytes. You will need to call `out.resize(out.capacity(), 0)`
-    ///           if your transformer relies on having a max sized buffer to write into.
-    fn from(&self, _: &mut Vec<u8>) -> Result<(), BackhandError>;
+    /// * `buf` - Input bytes to be mutated
+    /// * `skip` - Number of bytes to skip if using a stateful streaming transformation
+    fn from(&self, buf: &mut Vec<u8>, skip: Option<usize>) -> Result<(), BackhandError>;
 }
 
 /// Default transformer that simply copies the data
@@ -23,7 +22,7 @@ pub trait TransformAction {
 pub struct DefaultTransformer;
 
 impl TransformAction for DefaultTransformer {
-    fn from(&self, _: &mut Vec<u8>) -> Result<(), BackhandError> {
+    fn from(&self, _: &mut Vec<u8>, _: Option<usize>) -> Result<(), BackhandError> {
         // Default implementation does nothing
         Ok(())
     }

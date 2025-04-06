@@ -121,7 +121,7 @@ pub fn read_block<R: Read + Seek>(
     let mut len_buf = vec![0u8; 2];
     reader.read_exact(&mut len_buf)?;
 
-    kind.inner.transformer.from(&mut len_buf)?;
+    kind.inner.transformer.from(&mut len_buf, None)?;
 
     let metadata_len = match kind.inner.data_endian {
         Endian::Big => u16::from_be_bytes(len_buf.try_into().unwrap()),
@@ -133,7 +133,7 @@ pub fn read_block<R: Read + Seek>(
     let mut buf = vec![0u8; byte_len as usize];
     reader.read_exact(&mut buf)?;
 
-    kind.inner.transformer.from(&mut buf)?;
+    kind.inner.transformer.from(&mut buf, Some(2))?;
 
     let bytes = if is_compressed(metadata_len) {
         tracing::trace!("compressed");
