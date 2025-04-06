@@ -118,9 +118,6 @@ pub fn read_block<R: Read + Seek>(
     superblock: &SuperBlock,
     kind: &Kind,
 ) -> Result<Vec<u8>, BackhandError> {
-    tracing::trace!("resetting transformer");
-    kind.inner.transformer.reset()?;
-
     let mut len_buf = vec![0u8; 2];
     reader.read_exact(&mut len_buf)?;
 

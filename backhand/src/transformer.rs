@@ -13,19 +13,7 @@ pub trait TransformAction {
     /// * `bytes` - Input bytes
     /// * `out` - Output transformed bytes. You will need to call `out.resize(out.capacity(), 0)`
     ///           if your transformer relies on having a max sized buffer to write into.
-    fn from(&self, _: &mut Vec<u8>) -> Result<(), BackhandError> {
-        // Default implementation does nothing
-        Ok(())
-    }
-
-    /// Reset the transformer to its default state, such as between blocks
-    /// This allows for stateful transformers to reset their state
-    /// to a default state.
-    /// This is called before the `from` function is called.
-    fn reset(&self) -> Result<(), BackhandError> {
-        // Default implementation does nothing
-        Ok(())
-    }
+    fn from(&self, _: &mut Vec<u8>) -> Result<(), BackhandError>;
 }
 
 /// Default transformer that simply copies the data
@@ -34,4 +22,9 @@ pub trait TransformAction {
 #[derive(Copy, Clone)]
 pub struct DefaultTransformer;
 
-impl TransformAction for DefaultTransformer {}
+impl TransformAction for DefaultTransformer {
+    fn from(&self, _: &mut Vec<u8>) -> Result<(), BackhandError> {
+        // Default implementation does nothing
+        Ok(())
+    }
+}
