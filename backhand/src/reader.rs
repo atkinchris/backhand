@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, Cursor, Read, Seek, SeekFrom, Write};
 
+use deku::ctx::Endian;
 use deku::prelude::*;
 use solana_nohash_hasher::IntMap;
 use tracing::{error, trace};
@@ -228,13 +229,18 @@ pub trait SquashFsReader: BufReadSeek + Sized {
         // find the pointer at the initial offset
         trace!("seek: {:02x?}", seek);
         self.seek(SeekFrom::Start(seek))?;
-        let buf: &mut [u8] = &mut [0u8; 8];
-        self.read_exact(buf)?;
+        let mut buf = vec![0u8; 8];
+        self.read_exact(&mut buf)?;
+
+        // transform the pointer
+        kind.inner.transformer.from(&mut buf, None)?;
+
         trace!("{:02x?}", buf);
 
-        let mut cursor = Cursor::new(buf);
-        let mut deku_reader = Reader::new(&mut cursor);
-        let ptr = u64::from_reader_with_ctx(&mut deku_reader, kind.inner.type_endian)?;
+        let ptr = match kind.inner.data_endian {
+            Endian::Big => u64::from_be_bytes(buf.try_into().unwrap()),
+            Endian::Little => u64::from_le_bytes(buf.try_into().unwrap()),
+        };
 
         let block_count = (size as f32 / METADATA_MAXSIZE as f32).ceil() as u64;
 
