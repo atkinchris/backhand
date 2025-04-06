@@ -12,7 +12,7 @@ pub trait TransformAction {
     ///
     /// * `buf` - Input bytes to be mutated
     /// * `skip` - Number of bytes to skip if using a stateful streaming transformation
-    fn from(&self, buf: &mut Vec<u8>, skip: Option<usize>) -> Result<(), BackhandError>;
+    fn from(&self, buf: &mut [u8], skip: Option<usize>) -> Result<(), BackhandError>;
 }
 
 /// Default transformer that simply copies the data
@@ -22,7 +22,7 @@ pub trait TransformAction {
 pub struct DefaultTransformer;
 
 impl TransformAction for DefaultTransformer {
-    fn from(&self, _: &mut Vec<u8>, _: Option<usize>) -> Result<(), BackhandError> {
+    fn from(&self, _: &mut [u8], _: Option<usize>) -> Result<(), BackhandError> {
         // Default implementation does nothing
         Ok(())
     }
